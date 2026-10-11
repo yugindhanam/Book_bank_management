@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+enum Role {
+  ADMIN
+  LIBRARIAN
+  STUDENT
+}
+enum CopyStatus {
+  AVAILABLE
+  ISSUED
+  LOST
+  MAINTENANCE
+}
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  FULFILLED
+}
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  passwordHash String
+  role Role @default(STUDENT)
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  student Student?
+  sessions Session[]
+  notifications Notification[]
+  auditLogs AuditLog[]
+  issuedLoans Loan[] @relation("Issuer")
+  returnedLoans Loan[] @relation("Returner")
+  settlements Settlement[]
+}
+model Session {
+  id String @id
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  expiresAt DateTime
+  @@index([userId])
+  @@index([expiresAt])
+}
+model LoginAttempt {
+  key String @id
+  count Int @default(0)
+  windowStart DateTime @default(now())
+}
+model Student {
+  id String @id @default(cuid())
+  userId String @unique
+  user User @relation(fields:[userId], references:[id], onDelete:Restrict)
+  rollNumber String @unique
+  department String
+  semester Int
+  phone String?
+  createdAt DateTime @default(now())
+  requests BookRequest[]
+  loans Loan[]
+  @@index([department])
+}
+model Category {
+  id String @id @default(cuid())
+  name String @unique
+  description String @default("")
+  archived Boolean @default(false)
+  books Book[]
+}
+model Book {
+  id String @id @default(cuid())
+  isbn String? @unique
+  title String
+  author String
+  publisher String @default("")
+  edition String @default("")
+  year Int?
+  description String @default("")
+  coverUrl String?
+  shelf String
+  categoryId String
+  category Category @relation(fields:[categoryId], references:[id], onDelete:Restrict)
+  archived Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  copies BookCopy[]
+  requests BookRequest[]
+  @@index([categoryId, archived])
+  @@index([title])
+}
+model BookCopy {
+  id String @id @default(cuid())
+  accession String @unique
+  bookId String
+  book Book @relation(fields:[bookId], references:[id], onDelete:Restrict)
+  status CopyStatus @default(AVAILABLE)
+  createdAt DateTime @default(now())
+  loans Loan[]
+  @@index([bookId, status])
+}
+model BookRequest {
+  id String @id @default(cuid())
+  bookId String
+  book Book @relation(fields:[bookId], references:[id], onDelete:Restrict)
+  studentId String
+  student Student @relation(fields:[studentId], references:[id], onDelete:Restrict)
+  status RequestStatus @default(PENDING)
+  reason String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  loan Loan?
+  @@index([studentId, status])
+}
+model Loan {
+  id String @id @default(cuid())
+  copyId String
+  copy BookCopy @relation(fields:[copyId], references:[id], onDelete:Restrict)
+  studentId String
+  student Student @relation(fields:[studentId], references:[id], onDelete:Restrict)
+  requestId String? @unique
+  request BookRequest? @relation(fields:[requestId], references:[id], onDelete:Restrict)
+  issuedById String
+  issuedBy User @relation("Issuer", fields:[issuedById], references:[id], onDelete:Restrict)
+  returnedById String?
+  returnedBy User? @relation("Returner", fields:[returnedById], references:[id], onDelete:Restrict)
+  issuedAt DateTime @default(now())
+  dueAt DateTime
+  returnedAt DateTime?
+  dailyFine Int
+  graceDays Int @default(0)
+  fine Fine?
+  @@index([studentId, returnedAt])
+  @@index([dueAt, returnedAt])
+}
+model Fine {
+  id String @id @default(cuid())
+  loanId String @unique
+  loan Loan @relation(fields:[loanId], references:[id], onDelete:Restrict)
+  assessed Int
+  createdAt DateTime @default(now())
+  settlements Settlement[]
+}
+model Settlement {
+  id String @id @default(cuid())
+  fineId String
+  fine Fine @relation(fields:[fineId], references:[id], onDelete:Restrict)
+  amount Int
+  waived Boolean @default(false)
+  reason String?
+  reference String?
+  recordedById String
+  recordedBy User @relation(fields:[recordedById], references:[id], onDelete:Restrict)
+  createdAt DateTime @default(now())
+  @@index([fineId])
+}
+model Notification {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  message String
+  read Boolean @default(false)
+  createdAt DateTime @default(now())
+  @@index([userId, read])
+}
+model AuditLog {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Restrict)
+  action String
+  recordId String
+  detail String @default("")
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}
+model LibrarySettings {
+  id String @id @default("library")
+  name String @default("LICET Book Bank")
+  loanDays Int @default(14)
+  maxLoans Int @default(3)
+  dailyFine Int @default(500)
+  graceDays Int @default(0)
+}

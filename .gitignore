@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.next-e2e/
+.env
+.env.local
+.env.*
+!.env.example
+.postgres/
+.local-data/
+*.log
+tsconfig.tsbuildinfo
+coverage/
+test-results/
