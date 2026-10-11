@@ -4,6 +4,10 @@ A working book bank application for **LICET — Loyola-ICAM College of Engineeri
 
 ## Run this prepared workspace
 
+**Easiest option:** double-click `start-all.bat` in the project folder. It starts PostgreSQL, installs dependencies if missing, applies pending migrations when starting the web server, and opens the application in your default browser once ready. Keep the terminal window open; press Ctrl+C to stop the web server. Launching it again reuses an already-running instance. It never seeds or resets student data.
+
+The launcher uses the local `APP_ORIGIN` from `.env` and finds PostgreSQL using the database's installed major version. If another application uses the configured web port, it selects a free nearby port and adjusts the origin for that launch without editing `.env`. Set `POSTGRES_BIN` only if PostgreSQL is installed in a nonstandard location. It is intended for this prepared local workspace; a fresh clone still needs the database and `.env` setup below.
+
 Dependencies, a private local `.env`, migrations and development records have been prepared. PostgreSQL runs in **this project's `.postgres/data`**, bound to `127.0.0.1:55432`. It does not modify an existing PostgreSQL installation's data directory.
 
 ```powershell
